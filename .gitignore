@@ -1,0 +1,34 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Distribution / packaging
+dist/
+build/
+*.egg-info/
+*.egg
+
+# Virtual environments
+venv/
+test_venv/
+
+# Environment variables
+.env
+
+# Credentials
+*credentials*.json
+*service_account*.json
+
+# macOS
+.DS_Store
+
+# pytest
+.pytest_cache/
+
+# IDE
+.vscode/
+.idea/
+
+# mypy
+.mypy_cache/

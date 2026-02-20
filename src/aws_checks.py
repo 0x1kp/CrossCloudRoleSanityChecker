@@ -1,10 +1,18 @@
 import boto3
 
-def check_iam_role_permissions(role_name):
+def check_iam_role_permissions(role_name: str) -> list[str]:
+    """Check an IAM role's attached policies for overly permissive actions.
+
+    Args:
+        role_name: The name of the AWS IAM role to inspect.
+
+    Returns:
+        A list of strings describing any overly permissive policy actions found.
+    """
     iam = boto3.client('iam')
     attached_policies = iam.list_attached_role_policies(RoleName=role_name).get('AttachedPolicies', [])
-    
-    issues = []
+
+    issues: list[str] = []
     for policy in attached_policies:
         policy_arn = policy['PolicyArn']
         version = iam.get_policy(PolicyArn=policy_arn)['Policy']['DefaultVersionId']
@@ -19,11 +27,19 @@ def check_iam_role_permissions(role_name):
                     issues.append(f"Policy {policy['PolicyName']} grants overly permissive access: {action}")
     return issues
 
-def check_trust_policy(role_name):
+def check_trust_policy(role_name: str) -> list[str]:
+    """Inspect an IAM role's trust policy for overly broad principal access.
+
+    Args:
+        role_name: The name of the AWS IAM role to inspect.
+
+    Returns:
+        A list of strings describing any trust policy issues found.
+    """
     iam = boto3.client('iam')
     role = iam.get_role(RoleName=role_name)
     trust_doc = role['Role']['AssumeRolePolicyDocument']
-    issues = []
+    issues: list[str] = []
     statements = trust_doc.get('Statement', [])
     for stmt in statements:
         principal = stmt.get('Principal', {})
@@ -31,7 +47,15 @@ def check_trust_policy(role_name):
             issues.append("Trust policy allows all principals (*)")
     return issues
 
-def check_s3_bucket_encryption(bucket_name):
+def check_s3_bucket_encryption(bucket_name: str) -> list[str]:
+    """Check whether an S3 bucket has server-side encryption enabled.
+
+    Args:
+        bucket_name: The name of the S3 bucket to check.
+
+    Returns:
+        A list containing an error message if encryption is missing, or empty if enabled.
+    """
     s3 = boto3.client('s3')
     try:
         s3.get_bucket_encryption(Bucket=bucket_name)
@@ -39,11 +63,19 @@ def check_s3_bucket_encryption(bucket_name):
     except s3.exceptions.ClientError:
         return [f"S3 bucket {bucket_name} does not have encryption enabled"]
 
-def check_s3_public_access(bucket_name):
+def check_s3_public_access(bucket_name: str) -> list[str]:
+    """Check whether S3 public access block settings are fully enforced.
+
+    Args:
+        bucket_name: The name of the S3 bucket to check.
+
+    Returns:
+        A list containing a warning if public access is not fully blocked, or empty if secure.
+    """
     s3 = boto3.client('s3control')
     account_id = boto3.client('sts').get_caller_identity().get('Account')
     result = s3.get_public_access_block(AccountId=account_id)
-    config = result['PublicAccessBlockConfiguration']
-    if not all(config.values()):
+    access_config = result['PublicAccessBlockConfiguration']
+    if not all(access_config.values()):
         return [f"S3 bucket {bucket_name} public access block settings are not fully enforced"]
     return []
